@@ -1,4 +1,4 @@
-import React, { KeyboardEvent, useEffect, useState } from 'react';
+import React, { KeyboardEvent, useEffect, useRef, useState } from 'react';
 import Ball from './Ball';
 import Paddle from './Paddle';
 
@@ -11,6 +11,8 @@ const UPDATE_TICK_MS = 20;
 const BALL_INITIAL_SPEED = 3;
 type Velocity = Position;
 const PLAYER_SPEED = 10;
+
+// const MIN_REFLECT_MS = 150; // min time between player bounces
 
 const playerMotion = {
   ArrowUp: ({ x, y }: Position) => {
@@ -46,34 +48,42 @@ function overlap(player: Position, ball: Position): boolean {
   return distance(pC, bC) <= PLAYER_SIZE / 2 + BALL_SIZE / 2;
 }
 
-function reflect(player: Position, ball: Position, ballVel: Velocity): Velocity {
-  const le = undefined;
-  // (ls.x, ls.y) = start of line
-  // (le.x, le.y) = end of line
-  const dx: number = le.x - ls.x;
-  const dy: number = le.y - ls.y;
+function reflect(player: Position, ball: Position, bV: Velocity): Velocity {
+  player = center(player, PLAYER_SIZE);
+  ball = center(ball, BALL_SIZE);
+  const midpoint: Position = { x: (player.x + ball.x) / 2, y: (player.y + ball.y) / 2 };
+  // slope of tangent line:
+  const dx = -(ball.y - player.y);
+  const dy = ball.x - player.x;
 
-  if (dx == 0 && dy == 0) {
-    return new Point(2 * l.sx - p.x, 2 * l.sy - p.y);
+  // adjust velocity relative to midpoint
+  bV = { x: bV.x + midpoint.x, y: bV.y + midpoint.y };
+
+  if (dx === 0 && dy === 0) {
+    // don't think we should ever get here?
+    return { x: 2 * midpoint.x - bV.x, y: 2 * midpoint.y - bV.y };
   } else {
-    const t: number = ((p.x - l.sx) * dx + (p.y - l.sy) * dy) / (dx * dx + dy * dy);
-    const x: number = 2 * (l.sx + t * dx) - p.x;
-    const y: number = 2 * (l.sy + t * dy) - p.y;
-    return new Point(x, y);
+    const t = ((bV.x - midpoint.x) * dx + (bV.y - midpoint.y) * dy) / (dx * dx + dy * dy);
+    const x = 2 * (midpoint.x + t * dx) - bV.x - midpoint.x;
+    const y = 2 * (midpoint.y + t * dy) - bV.y - midpoint.y;
+    return { x, y };
   }
-  return {
-    x: -ballVel.x,
-    y: -ballVel.y,
-  };
 }
 
 function useBallPhysics(
   ball: Position,
-  ballVel: Velocity,
   player: Position,
   setBallVel: React.Dispatch<React.SetStateAction<Velocity>>,
 ) {
+  let timeSinceBounce = useRef(Date.now());
   useEffect(() => {
+    // assume circular player and ball, position being topleft
+    if (overlap(player, ball)) {
+      // potential fix to weird physics when inside each other, not super effective
+      // && Date.now() - timeSinceBounce.current >= MIN_REFLECT_MS) {
+      // timeSinceBounce.current = Date.now();
+      return setBallVel(ballVel => reflect(player, ball, ballVel));
+    }
     let xVelModifier: number | undefined = undefined;
     let yVelModifier: number | undefined = undefined;
     if (ball.x + BALL_SIZE >= MAX_X) {
@@ -86,12 +96,6 @@ function useBallPhysics(
     } else if (ball.y <= MIN_Y) {
       yVelModifier = 1;
     }
-    // assume circular player and ball, position being topleft
-    if (overlap(player, ball)) {
-      return setBallVel(ballVel => {
-        return reflect(player, ball, ballVel);
-      });
-    }
     if (xVelModifier !== undefined || yVelModifier !== undefined) {
       setBallVel(({ x, y }) => {
         return {
@@ -100,7 +104,7 @@ function useBallPhysics(
         };
       });
     }
-  }, [ball, player, setBallVel]);
+  }, [ball, player, setBallVel, timeSinceBounce]);
 }
 
 function App() {
@@ -122,9 +126,13 @@ function App() {
     return () => clearInterval(id);
   }, [ballVel]);
 
-  useBallPhysics(ballPos, ballVel, playerPos, setBallVel);
+  useBallPhysics(ballPos, playerPos, setBallVel);
 
   function handleInput(evt: KeyboardEvent) {
+    // stops the player if theyre colliding with a ball to reduce jank physics
+    // if (overlap(playerPos, ballPos)) {
+    //   return;
+    // }
     const key = evt.key as keyof typeof playerMotion;
     if (Object.keys(playerMotion).includes(key)) {
       setPlayerPos(playerMotion[key]);
