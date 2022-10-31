@@ -32,6 +32,19 @@ const MAX_X = 1200;
 const MIN_Y = 0;
 const MAX_Y = 800;
 const BALL_SIZE = 48;
+const PLAYER_SIZE = 60;
+
+function center(player: Position, size: number): Position {
+  return { x: player.x + size / 2, y: player.y + size / 2 };
+}
+function distance(p1: Position, p2: Position) {
+  return Math.sqrt(Math.pow(p2.x - p2.x, 2) + Math.pow(p2.y - p2.y, 2));
+}
+function overlap(player: Position, ball: Position): boolean {
+  const pC = center(player, PLAYER_SIZE);
+  const bC = center(ball, BALL_SIZE);
+  return distance(pC, bC) <= PLAYER_SIZE / 2 + BALL_SIZE / 2;
+}
 
 function useBallPhysics(
   ball: Position,
@@ -43,26 +56,18 @@ function useBallPhysics(
     let xVelModifier: number | undefined = undefined;
     let yVelModifier: number | undefined = undefined;
     if (ball.x + BALL_SIZE >= MAX_X) {
-      setBallVel(({ x, y }) => {
-        return {
-          xVelModifier = -1;
-          y,
-        };
-      });
+      xVelModifier = -1;
     } else if (ball.x <= MIN_X) {
-      setBallVel(({ x, y }) => {
-        return {
-          xVelModifier = 1;
-          y,
-        };
-      });
+      xVelModifier = 1;
     }
     if (ball.y + BALL_SIZE >= MAX_Y) {
       yVelModifier = -1;
     } else if (ball.y <= MIN_Y) {
       yVelModifier = 1;
     }
-
+    // assume circular player and ball, position being topleft
+    if (overlap(player, ball)) {
+    }
     if (xVelModifier !== undefined || yVelModifier !== undefined) {
       setBallVel(({ x, y }) => {
         return {
