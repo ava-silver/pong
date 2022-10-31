@@ -1,47 +1,116 @@
-import React, { KeyboardEvent, useState } from "react";
-import Paddle from "./Paddle";
+import React, { KeyboardEvent, useEffect, useState } from 'react';
+import Ball from './Ball';
+import Paddle from './Paddle';
 
 export interface Position {
   x: number;
   y: number;
 }
 
+const UPDATE_TICK_MS = 20;
+
+type Velocity = Position;
+const PLAYER_SPEED = 10;
+
+const playerMotion = {
+  ArrowUp: ({ x, y }: Position) => {
+    return { x, y: y - PLAYER_SPEED };
+  },
+  ArrowDown: ({ x, y }: Position) => {
+    return { x, y: y + PLAYER_SPEED };
+  },
+  ArrowLeft: ({ x, y }: Position) => {
+    return { x: x - PLAYER_SPEED, y };
+  },
+  ArrowRight: ({ x, y }: Position) => {
+    return { x: x + PLAYER_SPEED, y };
+  },
+};
+
+const MIN_X = 0;
+const MAX_X = 1200;
+const MIN_Y = 0;
+const MAX_Y = 800;
+const BALL_SIZE = 48;
+
+function useBallPhysics(
+  ball: Position,
+  ballVel: Velocity,
+  player: Position,
+  setBallVel: React.Dispatch<React.SetStateAction<Velocity>>,
+) {
+  useEffect(() => {
+    let xVelModifier: number | undefined = undefined;
+    let yVelModifier: number | undefined = undefined;
+    if (ball.x + BALL_SIZE >= MAX_X) {
+      setBallVel(({ x, y }) => {
+        return {
+          xVelModifier = -1;
+          y,
+        };
+      });
+    } else if (ball.x <= MIN_X) {
+      setBallVel(({ x, y }) => {
+        return {
+          xVelModifier = 1;
+          y,
+        };
+      });
+    }
+    if (ball.y + BALL_SIZE >= MAX_Y) {
+      yVelModifier = -1;
+    } else if (ball.y <= MIN_Y) {
+      yVelModifier = 1;
+    }
+
+    if (xVelModifier !== undefined || yVelModifier !== undefined) {
+      setBallVel(({ x, y }) => {
+        return {
+          x: xVelModifier === undefined ? x : xVelModifier * Math.abs(x),
+          y: yVelModifier === undefined ? y : yVelModifier * Math.abs(y),
+        };
+      });
+    }
+  }, [ball, ballVel, player, setBallVel]);
+}
+
 function App() {
-  const [player1Pos, setPlayer1Pos] = useState<number>(50);
-  const [player2Pos, setPlayer2Pos] = useState<number>(50);
-  // const [p1move, setP1move] = useState<-1 | 0 | 1>(0);
-  // const [p2move, setP2move] = useState<-1 | 0 | 1>(0);
+  const [playerPos, setPlayerPos] = useState<Position>({ x: 1150, y: 50 });
+  const [ballPos, setBallPos] = useState<Position>({ x: 500, y: 500 });
+  const [ballVel, setBallVel] = useState<Velocity>({ x: 3, y: 3 });
+  useEffect(() => {
+    const id = setInterval(() => {
+      setBallPos(({ x, y }) => {
+        return {
+          x: x + ballVel.x,
+          y: y + ballVel.y,
+        };
+      });
+    }, UPDATE_TICK_MS);
+    return () => clearInterval(id);
+  }, [ballVel]);
+
+  useBallPhysics(ballPos, ballVel, playerPos, setBallVel);
 
   function handleInput(evt: KeyboardEvent) {
-    if (evt.shiftKey && !evt.ctrlKey) {
-      // P1 up
-      setPlayer1Pos((y) => y - 10);
-    } else if (!evt.shiftKey && evt.ctrlKey) {
-      // P1 down
-      setPlayer1Pos((y) => y + 10);
-    }
-    if (evt.key === "ArrowUp") {
-      // P2 up
-      setPlayer2Pos((y) => y - 10);
-    } else if (evt.key === "ArrowDown") {
-      // P2 down
-      setPlayer2Pos((y) => y + 10);
+    const key = evt.key as keyof typeof playerMotion;
+    if (Object.keys(playerMotion).includes(key)) {
+      setPlayerPos(playerMotion[key]);
     }
   }
   return (
     <div
       style={{
-        position: "absolute",
-        left: "60px",
-        backgroundColor: "black",
-        height: "50rem",
-        width: "75rem",
+        position: 'absolute',
+        left: '60px',
+        backgroundColor: 'black',
+        height: '50rem',
+        width: '75rem',
       }}
       tabIndex={0}
-      onKeyDown={handleInput}
-    >
-      <Paddle pos={{ x: 0, y: player1Pos }} />
-      <Paddle pos={{ x: 800, y: player2Pos }} />
+      onKeyDown={handleInput}>
+      <Ball pos={ballPos} />
+      <Paddle pos={playerPos} />
     </div>
   );
 }

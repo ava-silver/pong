@@ -1,12 +1,13 @@
 import React, { CSSProperties } from 'react';
 import { Position } from './App';
 
-function Paddle({ pos }: { pos: Position }) {
+function Ball({ pos }: { pos: Position }) {
   const style: CSSProperties = {
-    backgroundColor: 'yellow',
-    width: '4rem',
-    height: '4rem',
+    backgroundColor: 'red',
+    width: '3rem',
+    height: '3rem',
     position: 'absolute',
+    borderRadius: '50%',
     top: `${pos.y}px`,
     left: `${pos.x}px`,
   };
@@ -14,4 +15,4 @@ function Paddle({ pos }: { pos: Position }) {
   return <div style={style} />;
 }
 
-export default Paddle;
+export default Ball;
