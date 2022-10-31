@@ -8,7 +8,7 @@ export interface Position {
 }
 
 const UPDATE_TICK_MS = 20;
-
+const BALL_INITIAL_SPEED = 3;
 type Velocity = Position;
 const PLAYER_SPEED = 10;
 
@@ -32,18 +32,39 @@ const MAX_X = 1200;
 const MIN_Y = 0;
 const MAX_Y = 800;
 const BALL_SIZE = 48;
-const PLAYER_SIZE = 60;
+const PLAYER_SIZE = 64;
 
 function center(player: Position, size: number): Position {
   return { x: player.x + size / 2, y: player.y + size / 2 };
 }
 function distance(p1: Position, p2: Position) {
-  return Math.sqrt(Math.pow(p2.x - p2.x, 2) + Math.pow(p2.y - p2.y, 2));
+  return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
 }
 function overlap(player: Position, ball: Position): boolean {
   const pC = center(player, PLAYER_SIZE);
   const bC = center(ball, BALL_SIZE);
   return distance(pC, bC) <= PLAYER_SIZE / 2 + BALL_SIZE / 2;
+}
+
+function reflect(player: Position, ball: Position, ballVel: Velocity): Velocity {
+  const le = undefined;
+  // (ls.x, ls.y) = start of line
+  // (le.x, le.y) = end of line
+  const dx: number = le.x - ls.x;
+  const dy: number = le.y - ls.y;
+
+  if (dx == 0 && dy == 0) {
+    return new Point(2 * l.sx - p.x, 2 * l.sy - p.y);
+  } else {
+    const t: number = ((p.x - l.sx) * dx + (p.y - l.sy) * dy) / (dx * dx + dy * dy);
+    const x: number = 2 * (l.sx + t * dx) - p.x;
+    const y: number = 2 * (l.sy + t * dy) - p.y;
+    return new Point(x, y);
+  }
+  return {
+    x: -ballVel.x,
+    y: -ballVel.y,
+  };
 }
 
 function useBallPhysics(
@@ -67,6 +88,9 @@ function useBallPhysics(
     }
     // assume circular player and ball, position being topleft
     if (overlap(player, ball)) {
+      return setBallVel(ballVel => {
+        return reflect(player, ball, ballVel);
+      });
     }
     if (xVelModifier !== undefined || yVelModifier !== undefined) {
       setBallVel(({ x, y }) => {
@@ -76,13 +100,16 @@ function useBallPhysics(
         };
       });
     }
-  }, [ball, ballVel, player, setBallVel]);
+  }, [ball, player, setBallVel]);
 }
 
 function App() {
   const [playerPos, setPlayerPos] = useState<Position>({ x: 1150, y: 50 });
   const [ballPos, setBallPos] = useState<Position>({ x: 500, y: 500 });
-  const [ballVel, setBallVel] = useState<Velocity>({ x: 3, y: 3 });
+  const [ballVel, setBallVel] = useState<Velocity>({
+    x: BALL_INITIAL_SPEED,
+    y: BALL_INITIAL_SPEED,
+  });
   useEffect(() => {
     const id = setInterval(() => {
       setBallPos(({ x, y }) => {
