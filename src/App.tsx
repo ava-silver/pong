@@ -64,6 +64,8 @@ function reflect(player: Position, ball: Position, bV: Velocity): Velocity {
     return { x: 2 * midpoint.x - bV.x, y: 2 * midpoint.y - bV.y };
   } else {
     const t = ((bV.x - midpoint.x) * dx + (bV.y - midpoint.y) * dy) / (dx * dx + dy * dy);
+    // calculate the points and adjust the velocity
+    // to not be relative to the midpoint
     const x = 2 * (midpoint.x + t * dx) - bV.x - midpoint.x;
     const y = 2 * (midpoint.y + t * dy) - bV.y - midpoint.y;
     return { x, y };
