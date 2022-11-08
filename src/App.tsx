@@ -47,8 +47,14 @@ function overlap(player: Position, ball: Position): boolean {
   const bC = center(ball, BALL_SIZE);
   return distance(pC, bC) <= PLAYER_SIZE / 2 + BALL_SIZE / 2;
 }
-
+function dot(p1: Velocity, p2: Velocity): number {
+  return p1.x * p2.x + p1.y * p2.y;
+}
 function reflect(player: Position, ball: Position, bV: Velocity): Velocity {
+  // already been reflected, traveling away from the player
+  if (dot({ x: ball.x - player.x, y: ball.y - player.y }, bV) > 0) {
+    return bV;
+  }
   player = center(player, PLAYER_SIZE);
   ball = center(ball, BALL_SIZE);
   const midpoint: Position = { x: (player.x + ball.x) / 2, y: (player.y + ball.y) / 2 };
@@ -77,13 +83,10 @@ function useBallPhysics(
   player: Position,
   setBallVel: React.Dispatch<React.SetStateAction<Velocity>>,
 ) {
-  let timeSinceBounce = useRef(Date.now());
+  // let timeSinceBounce = useRef(Date.now());
   useEffect(() => {
     // assume circular player and ball, position being topleft
     if (overlap(player, ball)) {
-      // potential fix to weird physics when inside each other, not super effective
-      // && Date.now() - timeSinceBounce.current >= MIN_REFLECT_MS) {
-      // timeSinceBounce.current = Date.now();
       return setBallVel(ballVel => reflect(player, ball, ballVel));
     }
     let xVelModifier: number | undefined = undefined;
@@ -106,7 +109,7 @@ function useBallPhysics(
         };
       });
     }
-  }, [ball, player, setBallVel, timeSinceBounce]);
+  }, [ball, player, setBallVel]);
 }
 
 function App() {
@@ -132,9 +135,9 @@ function App() {
 
   function handleInput(evt: KeyboardEvent) {
     // stops the player if theyre colliding with a ball to reduce jank physics
-    // if (overlap(playerPos, ballPos)) {
-    //   return;
-    // }
+    if (overlap(playerPos, ballPos)) {
+      return;
+    }
     const key = evt.key as keyof typeof playerMotion;
     if (Object.keys(playerMotion).includes(key)) {
       setPlayerPos(playerMotion[key]);
